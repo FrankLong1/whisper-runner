@@ -5,13 +5,18 @@ Fast, accurate Voice Memos transcription using Whisper with Metal acceleration.
 ## Quick Setup & Run
 
 Copy and paste this into your terminal:
+to run
+```bash
+./transcribe.sh
+
+to install...
 
 ```bash
 git clone [your-repo-url] whisper-runner
 cd whisper-runner
 ./setup.sh
-./transcribe
 ```
+
 
 That's it! Your Voice Memos will be transcribed with real-time output.
 
