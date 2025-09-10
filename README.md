@@ -8,6 +8,7 @@ Copy and paste this into your terminal:
 to run
 ```bash
 ./transcribe.sh
+```
 
 to install...
 
