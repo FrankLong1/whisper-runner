@@ -10,6 +10,11 @@ to run
 ./transcribe.sh
 ```
 
+To force re-transcription of files that were already transcribed:
+```bash
+./transcribe.sh --force
+```
+
 to install...
 
 ```bash
@@ -24,8 +29,9 @@ That's it! Your Voice Memos will be transcribed with real-time output.
 ## What You Get
 
 - **Real-time transcription display** as each file processes
-- **Date-organized output** in `outputs/MM-DD-YYYY-HHMMSS-transcript.md`  
+- **Date-organized output** in `outputs/MM-DD-YYYY-HHMMSS-transcript.md`
 - **Metal acceleration** on Apple Silicon (fast!)
+- **Smart duplicate detection** - automatically skips already-transcribed files
 - **Smart error handling** keeps problematic files for inspection
 - **Clean workflow** - copies, transcribes, cleans up automatically
 

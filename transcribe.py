@@ -8,6 +8,7 @@ import os
 import subprocess
 import tempfile
 import shutil
+import argparse
 from pathlib import Path
 from datetime import datetime
 import sys
@@ -18,6 +19,21 @@ MODEL_PATH = f"./models/{MODEL_NAME}"
 VOICE_MEMOS_DIR = Path.home() / "Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings"
 AUDIO_DIR = Path("./audio_input")
 OUTPUTS_DIR = Path("./outputs")
+
+def is_already_transcribed(filename: str) -> bool:
+    """Check if a file has already been transcribed by grepping through outputs"""
+    if not OUTPUTS_DIR.exists():
+        return False
+
+    # Use grep to search for the filename in all transcript files
+    search_pattern = f"## {filename}"
+    result = subprocess.run(
+        ["grep", "-l", search_pattern, *OUTPUTS_DIR.glob("*.md")],
+        capture_output=True,
+        text=True
+    )
+
+    return result.returncode == 0
 
 def copy_voice_memos():
     """Copy Voice Memos to working directory"""
@@ -92,6 +108,15 @@ def transcribe_file(audio_file: Path) -> str:
 
 def main():
     """Main transcription workflow"""
+    # Parse CLI arguments
+    parser = argparse.ArgumentParser(description="Transcribe Voice Memos with Whisper")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force re-transcription of files even if already transcribed"
+    )
+    args = parser.parse_args()
+
     if not Path(MODEL_PATH).exists():
         print(f"❌ Model not found: {MODEL_PATH}")
         print("Run ./setup.sh first to download the model")
@@ -132,28 +157,38 @@ def main():
     # Process files grouped by date
     current_date = None
     successfully_transcribed = []
-    
+    skipped_count = 0
+    newly_transcribed_count = 0
+
     for i, audio_file in enumerate(audio_files, 1):
         filename = audio_file.name
         file_date = datetime.fromtimestamp(audio_file.stat().st_mtime).strftime("%Y-%m-%d")
-        
+
+        # Check if already transcribed (unless force flag is set)
+        if not args.force and is_already_transcribed(filename):
+            print(f"[{i}/{total_files}] ✓ Already transcribed: {filename}")
+            skipped_count += 1
+            # Delete the file since it's already been transcribed
+            audio_file.unlink()
+            continue
+
         # Add date header if needed
         if file_date != current_date:
             if current_date is not None:
                 print()  # Add spacing between dates
                 with open(output_file, 'a', encoding='utf-8') as f:
                     f.write("\n")
-            
+
             print(f"📅 Processing files from {file_date}...")
             with open(output_file, 'a', encoding='utf-8') as f:
                 f.write(f"# {file_date}\n\n")
             current_date = file_date
-        
+
         print(f"[{i}/{total_files}] Processing: {filename}")
-        
+
         # Transcribe
         transcript = transcribe_file(audio_file)
-        
+
         # Show transcript in real-time
         if not transcript.startswith("❌") and transcript != "_No speech detected._":
             print(f"✅ Transcript:")
@@ -161,10 +196,11 @@ def main():
             print("---")
             print()
             successfully_transcribed.append(audio_file)
+            newly_transcribed_count += 1
         else:
             print(f"⚠️  {transcript}")
             print()
-        
+
         # Add to markdown
         with open(output_file, 'a', encoding='utf-8') as f:
             f.write(f"## {filename}\n\n")
@@ -185,7 +221,10 @@ def main():
     print()
     print("✅ Transcription complete!")
     print(f"📄 Output saved to: {output_file}")
-    print(f"📊 Total files processed: {total_files}")
+    print(f"📊 Total files: {total_files}")
+    if skipped_count > 0:
+        print(f"⏭️  Skipped (already transcribed): {skipped_count}")
+    print(f"🎤 Newly transcribed: {newly_transcribed_count}")
 
 if __name__ == "__main__":
     main()
